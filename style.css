@@ -125,12 +125,14 @@ button#downloadBtn:hover {
 }
 
 #pfpCanvas {
-  display: block;
-  margin: 1rem auto 1.5rem auto;
-  border-radius: 16px;
-  box-shadow: 0 0 25px #ff6600cc;
-  background: #222;
-  cursor: grab;
+ width: 512px;
+ height: 512px;
+ margin: 1rem auto 1.5rem auto;
+ border-radius: 16px;
+ box-shadow: 0 0 25px #ff6600cc;
+ background: #222 url("placeholder.png") no-repeat center center / contain;
+ display: block;
+ cursor: grab;
 }
 
 #pfpCanvas:active {
@@ -154,7 +156,7 @@ button#downloadBtn:hover {
   -webkit-user-drag: none;
 }
 
-/* Responsive Styles for Mobile */
+//* Responsive Styles for Mobile */
 @media (max-width: 768px) {
   body {
     padding: 0.5rem;
@@ -179,11 +181,25 @@ button#downloadBtn:hover {
     box-shadow: 0 0 10px #ff6600aa;
   }
 
-  .input-section h3 {
-    font-size: 1rem;
+  .input-section {
+    margin-bottom: 1rem; /* Tingkatkan jarak antar elemen */
+    text-align: center; /* Sentralisasi elemen */
   }
 
-  #profileInput,
+  .input-section h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem; /* Jarak antara judul dan tombol */
+  }
+
+  #profileInput {
+    width: 100%; /* Full-width untuk tombol file upload */
+    padding: 0.5rem; /* Padding untuk membuat tombol lebih nyaman */
+    border-radius: 8px;
+    background-color: #222;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
   #cropConfirmBtn,
   button#downloadBtn {
     width: 100%;
@@ -192,14 +208,20 @@ button#downloadBtn:hover {
   }
 
   #pfpCanvas {
-    max-width: 100%;
+    max-width: 300px; /* Ukuran maksimal canvas untuk mobile */
     height: auto;
+    background-color: #222; /* Warna latar belakang jika kosong */
+    background-image: url("placeholder.png"); /* Gambar placeholder */
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
   }
 
   .gallery {
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+    margin-bottom: 1rem; /* Tingkatkan jarak antara galeri dan canvas */
   }
 
   #maskGallery img {
@@ -215,4 +237,9 @@ button#downloadBtn:hover {
   .cropper-container {
     max-width: 100%;
   }
+}
+
+:root {
+  --mask-scale-desktop: 0.35;
+  --mask-scale-mobile: 0.25; /* Lebih kecil untuk mobile */
 }
