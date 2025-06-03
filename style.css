@@ -153,3 +153,66 @@ button#downloadBtn:hover {
   user-select: none;
   -webkit-user-drag: none;
 }
+
+/* Responsive Styles for Mobile */
+@media (max-width: 768px) {
+  body {
+    padding: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    width: 80px;
+    margin-right: 0;
+  }
+
+  .container {
+    padding: 1rem;
+    box-shadow: 0 0 10px #ff6600aa;
+  }
+
+  .input-section h3 {
+    font-size: 1rem;
+  }
+
+  #profileInput,
+  #cropConfirmBtn,
+  button#downloadBtn {
+    width: 100%;
+    margin-top: 0.5rem;
+    font-size: 1rem;
+  }
+
+  #pfpCanvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .gallery {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  #maskGallery img {
+    width: 100px;
+    height: 100px;
+  }
+
+  .gallery img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .cropper-container {
+    max-width: 100%;
+  }
+}
