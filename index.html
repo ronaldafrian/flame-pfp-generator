@@ -20,7 +20,7 @@
     <!-- Upload Profil -->
     <div class="input-section">
       <h3>Upload Your Pic</h3>
-      <input type="file" id="profileInput" accept="image/*" />
+      <input type="file" id="profileInput" accept="image/*" capture="environment" />
     </div>
 
     <!-- Cropper Preview -->
@@ -177,117 +177,128 @@
       }
     }
 
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+    function resizeCanvas() {
+  const maxWidth = window.innerWidth * 0.9; // 90% lebar layar
+  const size = Math.min(maxWidth, 512);
+  canvas.width = size;
+  canvas.height = size;
+  drawPFP();
+}
 
-      if (!maskImg) return;
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
 
-      const scaledWidth = maskImg.width * maskScale;
-      const scaledHeight = maskImg.height * maskScale;
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  if (!maskImg) return;
+
+  const scaledWidth = maskImg.width * maskScale;
+  const scaledHeight = maskImg.height * maskScale;
 
       // Cek resize handle
-      const handleSize = 12;
-      const handleX = maskPosition.x + scaledWidth - handleSize;
-      const handleY = maskPosition.y + scaledHeight - handleSize;
-      if (
-        mouseX >= handleX && mouseX <= handleX + handleSize &&
-        mouseY >= handleY && mouseY <= handleY + handleSize
-        ) {
-        isResizing = true;
-      resizeStart = { x: mouseX, y: mouseY };
-      initialMaskScale = maskScale;
-      return;
-    }
+  const handleSize = 12;
+  const handleX = maskPosition.x + scaledWidth - handleSize;
+  const handleY = maskPosition.y + scaledHeight - handleSize;
+  if (
+    mouseX >= handleX && mouseX <= handleX + handleSize &&
+    mouseY >= handleY && mouseY <= handleY + handleSize
+    ) {
+    isResizing = true;
+  resizeStart = { x: mouseX, y: mouseY };
+  initialMaskScale = maskScale;
+  return;
+}
 
       // Cek rotasi
-    const centerX = maskPosition.x + scaledWidth / 2;
-    const centerY = maskPosition.y + scaledHeight / 2;
-    const dx = mouseX - centerX;
-    const dy = mouseY - (centerY - scaledHeight / 2 - 20);
-    if (Math.sqrt(dx * dx + dy * dy) <= 10) {
-      isRotating = true;
-      rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
-      return;
-    }
+const centerX = maskPosition.x + scaledWidth / 2;
+const centerY = maskPosition.y + scaledHeight / 2;
+const dx = mouseX - centerX;
+const dy = mouseY - (centerY - scaledHeight / 2 - 20);
+if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+  isRotating = true;
+  rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
+  return;
+}
 
       // Cek drag
-    if (
-      mouseX >= maskPosition.x &&
-      mouseX <= maskPosition.x + scaledWidth &&
-      mouseY >= maskPosition.y &&
-      mouseY <= maskPosition.y + scaledHeight
-      ) {
-      isDragging = true;
-    dragOffset.x = mouseX - maskPosition.x;
-    dragOffset.y = mouseY - maskPosition.y;
+if (
+  mouseX >= maskPosition.x &&
+  mouseX <= maskPosition.x + scaledWidth &&
+  mouseY >= maskPosition.y &&
+  mouseY <= maskPosition.y + scaledHeight
+  ) {
+  isDragging = true;
+dragOffset.x = mouseX - maskPosition.x;
+dragOffset.y = mouseY - maskPosition.y;
+return;
+}
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  if (isDragging && maskImg) {
+    maskPosition.x = mouseX - dragOffset.x;
+    maskPosition.y = mouseY - dragOffset.y;
+    drawPFP();
+    return;
+  }
+
+  if (isRotating && maskImg) {
+    const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+    const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+    const angle = Math.atan2(mouseY - centerY, mouseX - centerX) - rotateStartAngle;
+    maskAngle = angle;
+    drawPFP();
+    return;
+  }
+
+  if (isResizing && maskImg) {
+    const dx = mouseX - resizeStart.x;
+    const dy = mouseY - resizeStart.y;
+    const avgDelta = (dx + dy) / 2;
+    let newScale = initialMaskScale + avgDelta / 200;
+
+    if (newScale >= 0.1 && newScale <= 2) {
+      maskScale = newScale;
+      drawPFP();
+    }
     return;
   }
 });
 
-    canvas.addEventListener('mousemove', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+window.addEventListener('mouseup', () => {
+  if (isRotating) lastMaskAngle = maskAngle;
+  isDragging = false;
+  isRotating = false;
+  isResizing = false;
+});
 
-      if (isDragging && maskImg) {
-        maskPosition.x = mouseX - dragOffset.x;
-        maskPosition.y = mouseY - dragOffset.y;
-        drawPFP();
-        return;
-      }
+downloadBtn.addEventListener('click', () => {
+  if (!profileImg) {
+    alert("UPLOAD YOUR PICT!");
+    return;
+  }
+  if (!maskImg) {
+    alert("ADD MASK!");
+    return;
+  }
 
-      if (isRotating && maskImg) {
-        const centerX = maskPosition.x + maskImg.width * maskScale / 2;
-        const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-        const angle = Math.atan2(mouseY - centerY, mouseX - centerX) - rotateStartAngle;
-        maskAngle = angle;
-        drawPFP();
-        return;
-      }
+  drawPFP();
 
-      if (isResizing && maskImg) {
-        const dx = mouseX - resizeStart.x;
-        const dy = mouseY - resizeStart.y;
-        const avgDelta = (dx + dy) / 2;
-        let newScale = initialMaskScale + avgDelta / 200;
-
-        if (newScale >= 0.1 && newScale <= 2) {
-          maskScale = newScale;
-          drawPFP();
-        }
-        return;
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (isRotating) lastMaskAngle = maskAngle;
-      isDragging = false;
-      isRotating = false;
-      isResizing = false;
-    });
-
-    downloadBtn.addEventListener('click', () => {
-      if (!profileImg) {
-        alert("UPLOAD YOUR PICT!");
-        return;
-      }
-      if (!maskImg) {
-        alert("ADD MASK!");
-        return;
-      }
-
-      drawPFP();
-
-      const dataURL = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'FLAME GANG.png';
-      link.href = dataURL;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    });
-  </script>
+  const dataURL = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.download = 'FLAME GANG.png';
+  link.href = dataURL;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+</script>
 </body>
 </html>
