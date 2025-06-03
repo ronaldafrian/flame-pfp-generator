@@ -20,29 +20,39 @@
       <h3>Upload Your Pic</h3>
       <input type="file" id="profileInput" accept="image/*" aria-label="Upload profile picture" />
     </div>
+
     <!-- Cropper Preview -->
     <div class="input-section" id="cropperContainer" style="display: none;">
       <h3>Crop Image</h3>
       <img id="cropperImage" alt="Crop preview" />
       <button id="cropConfirmBtn">✔️ Confirm Crop</button>
     </div>
-    <!-- Mask Gallery -->
+
+    <!-- Mask Gallery Horizontal Scroll -->
     <div class="input-section">
       <h3>Choose Mask</h3>
-      <div class="gallery" id="maskGallery">
-        <img src="mask1.png" alt="Mask 1" />
-        <img src="mask2.png" alt="Mask 2" />
-        <img src="mask3.png" alt="Mask 3" />
+      <div class="gallery-container">
+        <button id="prevBtn" class="nav-btn">&#8592;</button>
+        <div class="gallery" id="maskGallery">
+          <!-- Hanya 3 mask yang tertampil -->
+          <img src="mask1.png" alt="Mask 1" />
+          <img src="mask2.png" alt="Mask 2" />
+          <img src="mask3.png" alt="Mask 3" />
+        </div>
+        <button id="nextBtn" class="nav-btn">&#8594;</button>
       </div>
     </div>
+
     <!-- Canvas untuk preview -->
     <canvas id="pfpCanvas" width="512" height="512"></canvas>
+
     <!-- Tombol Download -->
     <div class="controls">
       <button id="downloadBtn">💾 Download PFP</button>
     </div>
   </div>
 
+  <!-- Script Section -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script> 
   <script>
     const profileInput = document.getElementById('profileInput');
@@ -60,11 +70,12 @@
     let maskPosition = { x: 0, y: 0 };
     let maskAngle = 0;
     let maskScale = window.innerWidth <= 768 ? 0.25 : 0.35;
+
+    // Variabel untuk manipulasi drag/rotate/resize
     let isDragging = false;
     let isRotating = false;
     let isResizing = false;
     let isPinching = false;
-
     let dragOffset = { x: 0, y: 0 };
     let rotateStartAngle = 0;
     let lastMaskAngle = 0;
@@ -73,6 +84,60 @@
     let initialDistance = 0;
     let initialAngle = 0;
     let pinchCenter = { x: 0, y: 0 };
+
+    // Daftar semua mask
+    const allMasks = [
+      "mask1.png", "mask2.png", "mask3.png",
+      "mask4.png", "mask5.png", "mask6.png",
+      "mask7.png", "mask8.png", "mask9.png",
+      "mask10.png", "mask11.png"
+    ];
+
+    let currentIndex = 0;
+    const maskWidth = 115; // lebar mask + gap
+
+    // Update tampilan hanya 3 mask
+    function updateGallery() {
+      maskGallery.innerHTML = ''; // Kosongkan dulu
+
+      for (let i = 0; i < 3; i++) {
+        const index = (currentIndex + i) % allMasks.length;
+        const img = document.createElement('img');
+        img.src = allMasks[index];
+        img.alt = `Mask ${index + 1}`;
+        if (i === 0) img.classList.add('selected'); // opsional
+        maskGallery.appendChild(img);
+      }
+
+      // Event listener untuk setiap mask
+      maskGallery.querySelectorAll('img').forEach((imgEl) => {
+        imgEl.addEventListener('click', () => {
+          maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
+          imgEl.classList.add('selected');
+          const selectedImg = new Image();
+          selectedImg.onload = () => {
+            maskImg = selectedImg;
+            centerMask();
+            drawPFP();
+          };
+          selectedImg.src = imgEl.src;
+        });
+      });
+    }
+
+    // Navigasi Looping
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      currentIndex = (currentIndex - 1 + allMasks.length) % allMasks.length;
+      updateGallery();
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      currentIndex = (currentIndex + 1) % allMasks.length;
+      updateGallery();
+    });
+
+    // Inisialisasi pertama kali
+    updateGallery();
 
     // Upload Gambar
     profileInput.addEventListener('change', (e) => {
@@ -113,21 +178,6 @@
       }
     });
 
-    // Pilih Mask
-    maskGallery.querySelectorAll('img').forEach(imgEl => {
-      imgEl.addEventListener('click', () => {
-        maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
-        imgEl.classList.add('selected');
-        const img = new Image();
-        img.onload = () => {
-          maskImg = img;
-          centerMask();
-          drawPFP();
-        };
-        img.src = imgEl.src;
-      });
-    });
-
     // Center Mask
     function centerMask() {
       if (!profileImg || !maskImg) return;
@@ -158,18 +208,15 @@
         ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
         ctx.restore();
 
-        // Hanya tampilkan titik rotasi dan resize di versi desktop
+        // Titik kontrol desktop
         const isMobile = window.innerWidth <= 768;
         if (!isMobile) {
-          // Titik Rotasi Merah
           const centerX = maskPosition.x + scaledWidth / 2;
           const centerY = maskPosition.y + scaledHeight / 2;
           ctx.beginPath();
           ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 6, 0, Math.PI * 2);
           ctx.fillStyle = 'red';
           ctx.fill();
-
-          // Kotak Resize Biru
           ctx.fillStyle = '#00ffcc';
           ctx.fillRect(maskPosition.x + scaledWidth - 12, maskPosition.y + scaledHeight - 12, 12, 12);
         }
@@ -204,15 +251,12 @@
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-
       if (!maskImg) return;
-
       const scaledWidth = maskImg.width * maskScale;
       const scaledHeight = maskImg.height * maskScale;
       const centerX = maskPosition.x + scaledWidth / 2;
       const centerY = maskPosition.y + scaledHeight / 2;
 
-      // Area Resize
       const handleSize = 40;
       if (
         mouseX >= maskPosition.x + scaledWidth - handleSize &&
@@ -226,21 +270,19 @@
       return;
     }
 
-      // Area Rotate
     const dx = mouseX - centerX;
     const dy = mouseY - (centerY - scaledHeight / 2 - 20);
     if (Math.sqrt(dx * dx + dy * dy) <= 10) {
       isRotating = true;
-      rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
+      rotateStartAngle = Math.atan2(dy, dx) - lastMaskAngle;
       return;
     }
 
-      // Area Drag
     if (
       mouseX >= maskPosition.x &&
-      mouseX <= maskPosition.x + scaledWidth &&
+      mouseX <= maskPosition.x + maskImg.width * maskScale &&
       mouseY >= maskPosition.y &&
-      mouseY <= maskPosition.y + scaledHeight
+      mouseY <= maskPosition.y + maskImg.height * maskScale
       ) {
       isDragging = true;
     dragOffset.x = mouseX - maskPosition.x;
@@ -271,14 +313,11 @@
 
       if (isResizing && maskImg) {
         const dx = mouseX - resizeStart.x;
-        const dy = mouseY - resizeStart.y;
-        const avgDelta = (dx + dy) / 2;
-        let newScale = initialMaskScale + avgDelta / 200;
+        let newScale = initialMaskScale + dx / 200;
         if (newScale >= 0.1 && newScale <= 2) {
           maskScale = newScale;
           drawPFP();
         }
-        return;
       }
     });
 
@@ -293,18 +332,13 @@
     // Touch Events
     canvas.addEventListener('touchstart', (e) => {
       const rect = canvas.getBoundingClientRect();
-
       if (!maskImg) return;
-
       if (e.touches.length === 1) {
         const touch = e.touches[0];
         const touchX = touch.clientX - rect.left;
         const touchY = touch.clientY - rect.top;
-
         const scaledWidth = maskImg.width * maskScale;
         const scaledHeight = maskImg.height * maskScale;
-
-        // Area Drag
         if (
           touchX >= maskPosition.x &&
           touchX <= maskPosition.x + scaledWidth &&
@@ -318,20 +352,16 @@
     } else if (e.touches.length === 2) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-
       const xDiff = t1.clientX - t2.clientX;
       const yDiff = t1.clientY - t2.clientY;
       initialDistance = Math.hypot(xDiff, yDiff);
-
       const xMid = (t1.clientX + t2.clientX) / 2;
       const yMid = (t1.clientY + t2.clientY) / 2;
       const midX = xMid - rect.left;
       const midY = yMid - rect.top;
-
       const dx = t1.clientX - t2.clientX;
       const dy = t1.clientY - t2.clientY;
       initialAngle = Math.atan2(dy, dx);
-
       pinchCenter = { x: midX, y: midY };
       isPinching = true;
     }
@@ -339,66 +369,50 @@
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault(); // mencegah scroll saat drag
-
       if (!maskImg) return;
-
       if (e.touches.length === 1 && !isPinching) {
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const touchX = touch.clientX - rect.left;
         const touchY = touch.clientY - rect.top;
-
         if (isDragging) {
           maskPosition.x = touchX - dragOffset.x;
           maskPosition.y = touchY - dragOffset.y;
           drawPFP();
-          return;
         }
       } else if (e.touches.length === 2) {
         const rect = canvas.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
-
         const xDiff = t1.clientX - t2.clientX;
         const yDiff = t1.clientY - t2.clientY;
         const distance = Math.hypot(xDiff, yDiff);
-
         const scaleChange = distance / initialDistance;
         let newScale = maskScale * scaleChange;
-        if (newScale >= 0.1 && newScale <= 3) {
-          maskScale = newScale;
-        }
-
+        if (newScale >= 0.1 && newScale <= 3) maskScale = newScale;
         const xMid = (t1.clientX + t2.clientX) / 2;
         const yMid = (t1.clientY + t2.clientY) / 2;
         const midX = xMid - rect.left;
         const midY = yMid - rect.top;
-
         const dx = t1.clientX - t2.clientX;
         const dy = t1.clientY - t2.clientY;
         const currentAngle = Math.atan2(dy, dx);
         const angleChange = currentAngle - initialAngle;
         maskAngle += angleChange;
         lastMaskAngle = maskAngle;
-
         const centerX = maskPosition.x + maskImg.width * maskScale / 2;
         const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-
         const dxToCenter = centerX - pinchCenter.x;
         const dyToCenter = centerY - pinchCenter.y;
-
         const cos = Math.cos(angleChange);
         const sin = Math.sin(angleChange);
         const rotatedX = dxToCenter * cos - dyToCenter * sin;
         const rotatedY = dxToCenter * sin + dyToCenter * cos;
-
         maskPosition.x = pinchCenter.x + rotatedX - (maskImg.width * maskScale / 2);
         maskPosition.y = pinchCenter.y + rotatedY - (maskImg.height * maskScale / 2);
-
         initialDistance = distance;
         initialAngle = currentAngle;
         pinchCenter = { x: midX, y: midY };
-
         drawPFP();
       }
     }, { passive: false });
@@ -420,28 +434,23 @@
         alert("ADD MASK!");
         return;
       }
-
       const HD_SIZE = 1024;
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
       tempCanvas.width = HD_SIZE;
       tempCanvas.height = HD_SIZE;
-
       tempCtx.drawImage(profileImg, 0, 0, HD_SIZE, HD_SIZE);
-
       const scaleRatio = HD_SIZE / canvas.width;
       const scaledWidth = maskImg.width * maskScale * scaleRatio;
       const scaledHeight = maskImg.height * maskScale * scaleRatio;
       const scaledX = maskPosition.x * scaleRatio;
       const scaledY = maskPosition.y * scaleRatio;
       const scaledAngle = maskAngle;
-
       tempCtx.save();
       tempCtx.translate(scaledX + scaledWidth / 2, scaledY + scaledHeight / 2);
       tempCtx.rotate(scaledAngle);
       tempCtx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
       tempCtx.restore();
-
       const dataURL = tempCanvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'FLAME_GANG_HD.png';
@@ -449,6 +458,8 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+
     });
   </script>
 </body>
