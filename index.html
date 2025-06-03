@@ -19,7 +19,7 @@
     <!-- Upload Profil -->
     <div class="input-section">
       <h3>Upload Your Pic</h3>
-      <input type="file" id="profileInput" accept="image/*" capture="environment" aria-label="Upload profile picture" />
+      <input type="file" id="profileInput" accept="image/*" capture aria-label="Upload profile picture" />
     </div>
 
     <!-- Cropper Preview -->
@@ -50,95 +50,194 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script> 
   <script>
-    const profileInput = document.getElementById('profileInput');
-    const cropperImage = document.getElementById('cropperImage');
-    const cropperContainer = document.getElementById('cropperContainer');
-    const cropConfirmBtn = document.getElementById('cropConfirmBtn');
-    const canvas = document.getElementById('pfpCanvas');
-    const ctx = canvas.getContext('2d');
-    const maskGallery = document.getElementById('maskGallery');
-    const downloadBtn = document.getElementById('downloadBtn');
+    // TOUCH EVENTS untuk drag / rotate / resize
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
 
-    let cropper = null;
-    let profileImg = null;
-    let maskImg = null;
+    function getTouchPos(touch) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    }
 
-    let maskPosition = { x: 0, y: 0 };
-    let maskAngle = 0;
-    let maskScale = window.innerWidth <= 768 ? 0.25 : 0.35;
+    function handleTouchStart(e) {
+      e.preventDefault();
+      if (!maskImg || e.touches.length !== 1) return;
 
-    let isDragging = false;
-    let isRotating = false;
-    let isResizing = false;
+      const { x, y } = getTouchPos(e.touches[0]);
 
-    let dragOffset = { x: 0, y: 0 };
-    let rotateStartAngle = 0;
-    let lastMaskAngle = 0;
+      const scaledWidth = maskImg.width * maskScale;
+      const scaledHeight = maskImg.height * maskScale;
 
-    let resizeStart = { x: 0, y: 0 };
-    let initialMaskScale = maskScale;
+      const centerX = maskPosition.x + scaledWidth / 2;
+      const centerY = maskPosition.y + scaledHeight / 2;
+
+      const handleSize = 12;
+      if (
+        x >= maskPosition.x + scaledWidth - handleSize &&
+        x <= maskPosition.x + scaledWidth &&
+        y >= maskPosition.y + scaledHeight - handleSize &&
+        y <= maskPosition.y + scaledHeight
+        ) {
+        isResizing = true;
+      resizeStart = { x, y };
+      initialMaskScale = maskScale;
+      return;
+    }
+
+    const dx = x - centerX;
+    const dy = y - (centerY - scaledHeight / 2 - 20);
+    if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+      isRotating = true;
+      rotateStartAngle = Math.atan2(y - centerY, x - centerX) - lastMaskAngle;
+      return;
+    }
+
+    if (
+      x >= maskPosition.x &&
+      x <= maskPosition.x + scaledWidth &&
+      y >= maskPosition.y &&
+      y <= maskPosition.y + scaledHeight
+      ) {
+      isDragging = true;
+    dragOffset = { x: x - maskPosition.x, y: y - maskPosition.y };
+    return;
+  }
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (!maskImg || e.touches.length !== 1) return;
+
+  const { x, y } = getTouchPos(e.touches[0]);
+
+  if (isDragging) {
+    maskPosition.x = x - dragOffset.x;
+    maskPosition.y = y - dragOffset.y;
+    drawPFP();
+    return;
+  }
+
+  if (isRotating) {
+    const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+    const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+    const angle = Math.atan2(y - centerY, x - centerX) - rotateStartAngle;
+    maskAngle = angle;
+    drawPFP();
+    return;
+  }
+
+  if (isResizing) {
+    const dx = x - resizeStart.x;
+    const dy = y - resizeStart.y;
+    const avgDelta = (dx + dy) / 2;
+    let newScale = initialMaskScale + avgDelta / 200;
+
+    if (newScale >= 0.1 && newScale <= 2) {
+      maskScale = newScale;
+      drawPFP();
+    }
+  }
+}
+
+function handleTouchEnd() {
+  if (isRotating) lastMaskAngle = maskAngle;
+  isDragging = false;
+  isRotating = false;
+  isResizing = false;
+}
+const profileInput = document.getElementById('profileInput');
+const cropperImage = document.getElementById('cropperImage');
+const cropperContainer = document.getElementById('cropperContainer');
+const cropConfirmBtn = document.getElementById('cropConfirmBtn');
+const canvas = document.getElementById('pfpCanvas');
+const ctx = canvas.getContext('2d');
+const maskGallery = document.getElementById('maskGallery');
+const downloadBtn = document.getElementById('downloadBtn');
+
+let cropper = null;
+let profileImg = null;
+let maskImg = null;
+
+let maskPosition = { x: 0, y: 0 };
+let maskAngle = 0;
+let maskScale = window.innerWidth <= 768 ? 0.25 : 0.35;
+
+let isDragging = false;
+let isRotating = false;
+let isResizing = false;
+
+let dragOffset = { x: 0, y: 0 };
+let rotateStartAngle = 0;
+let lastMaskAngle = 0;
+
+let resizeStart = { x: 0, y: 0 };
+let initialMaskScale = maskScale;
 
     // Upload Gambar
-    profileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+profileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        cropperImage.src = e.target.result;
-        cropperContainer.style.display = 'block';
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropperImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-          autoCropArea: 1,
-          movable: true,
-          zoomable: false,
-          scalable: false,
-          rotatable: false,
-        });
-      };
-      reader.readAsDataURL(file);
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    cropperImage.src = e.target.result;
+    cropperContainer.style.display = 'block';
+    if (cropper) cropper.destroy();
+    cropper = new Cropper(cropperImage, {
+      aspectRatio: 1,
+      viewMode: 1,
+      autoCropArea: 1,
+      movable: true,
+      zoomable: false,
+      scalable: false,
+      rotatable: false,
     });
+  };
+  reader.readAsDataURL(file);
+});
 
     // Konfirmasi Crop
-    cropConfirmBtn.addEventListener('click', () => {
-      if (cropper) {
-        const croppedCanvas = cropper.getCroppedCanvas({ width: 512, height: 512 });
-        const img = new Image();
-        img.onload = () => {
-          profileImg = img;
-          centerMask();
-          drawPFP();
-        };
-        img.src = croppedCanvas.toDataURL();
-        cropper.destroy();
-        cropper = null;
-        cropperContainer.style.display = 'none';
-      }
-    });
+cropConfirmBtn.addEventListener('click', () => {
+  if (cropper) {
+    const croppedCanvas = cropper.getCroppedCanvas({ width: 512, height: 512 });
+    const img = new Image();
+    img.onload = () => {
+      profileImg = img;
+      centerMask();
+      drawPFP();
+    };
+    img.src = croppedCanvas.toDataURL();
+    cropper.destroy();
+    cropper = null;
+    cropperContainer.style.display = 'none';
+  }
+});
 
     // Pilih Mask
-    maskGallery.querySelectorAll('img').forEach(imgEl => {
-      imgEl.addEventListener('click', () => {
-        maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
-        imgEl.classList.add('selected');
+maskGallery.querySelectorAll('img').forEach(imgEl => {
+  imgEl.addEventListener('click', () => {
+    maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
+    imgEl.classList.add('selected');
 
-        const img = new Image();
-        img.onload = () => {
-          maskImg = img;
-          centerMask();
-          drawPFP();
-        };
-        img.src = imgEl.src;
-      });
-    });
+    const img = new Image();
+    img.onload = () => {
+      maskImg = img;
+      centerMask();
+      drawPFP();
+    };
+    img.src = imgEl.src;
+  });
+});
 
     // Center Mask
-    function centerMask() {
-      if (!profileImg || !maskImg) return;
+function centerMask() {
+  if (!profileImg || !maskImg) return;
 
-      const isMobile = window.innerWidth <= 768;
+  const isMobile = window.innerWidth <= 768;
   const scale = isMobile ? 0.12 : 0.35; // mobile = lebih kecil
   maskScale = scale;
 
