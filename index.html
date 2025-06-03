@@ -158,17 +158,21 @@
         ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
         ctx.restore();
 
-        // Titik Rotasi Merah
-        const centerX = maskPosition.x + scaledWidth / 2;
-        const centerY = maskPosition.y + scaledHeight / 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 12, 0, Math.PI * 2);
-        ctx.fillStyle = 'red';
-        ctx.fill();
+        // Hanya tampilkan titik rotasi dan resize di versi desktop
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) {
+          // Titik Rotasi Merah
+          const centerX = maskPosition.x + scaledWidth / 2;
+          const centerY = maskPosition.y + scaledHeight / 2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'red';
+          ctx.fill();
 
-        // Kotak Resize Biru
-        ctx.fillStyle = '#00ffcc';
-        ctx.fillRect(maskPosition.x + scaledWidth - 20, maskPosition.y + scaledHeight - 20, 20, 20);
+          // Kotak Resize Biru
+          ctx.fillStyle = '#00ffcc';
+          ctx.fillRect(maskPosition.x + scaledWidth - 12, maskPosition.y + scaledHeight - 12, 12, 12);
+        }
       } else {
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
@@ -289,77 +293,49 @@
     // Touch Events
     canvas.addEventListener('touchstart', (e) => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / canvas.clientWidth;
-      const scaleY = canvas.height / canvas.clientHeight;
 
       if (!maskImg) return;
 
       if (e.touches.length === 1) {
         const touch = e.touches[0];
-        const touchX = (touch.clientX - rect.left) * scaleX;
-        const touchY = (touch.clientY - rect.top) * scaleY;
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
 
         const scaledWidth = maskImg.width * maskScale;
         const scaledHeight = maskImg.height * maskScale;
-        const centerX = maskPosition.x + scaledWidth / 2;
-        const centerY = maskPosition.y + scaledHeight / 2;
-
-        // Area Resize
-        const resizeSize = 60;
-        if (
-          touchX >= maskPosition.x + scaledWidth - resizeSize &&
-          touchX <= maskPosition.x + scaledWidth &&
-          touchY >= maskPosition.y + scaledHeight - resizeSize &&
-          touchY <= maskPosition.y + scaledHeight
-          ) {
-          isResizing = true;
-        resizeStart = { x: touchX, y: touchY };
-        initialMaskScale = maskScale;
-        return;
-      }
-
-        // Area Rotate
-      const rotateRadius = 50;
-      const dx = touchX - centerX;
-      const dy = touchY - (centerY - scaledHeight / 2 - 20);
-      if (Math.sqrt(dx * dx + dy * dy) <= rotateRadius) {
-        isRotating = true;
-        rotateStartAngle = Math.atan2(touchY - centerY, touchX - centerX) - lastMaskAngle;
-        return;
-      }
 
         // Area Drag
-      if (
-        touchX >= maskPosition.x &&
-        touchX <= maskPosition.x + scaledWidth &&
-        touchY >= maskPosition.y &&
-        touchY <= maskPosition.y + scaledHeight
-        ) {
-        isDragging = true;
-      dragOffset.x = touchX - maskPosition.x;
-      dragOffset.y = touchY - maskPosition.y;
+        if (
+          touchX >= maskPosition.x &&
+          touchX <= maskPosition.x + scaledWidth &&
+          touchY >= maskPosition.y &&
+          touchY <= maskPosition.y + scaledHeight
+          ) {
+          isDragging = true;
+        dragOffset.x = touchX - maskPosition.x;
+        dragOffset.y = touchY - maskPosition.y;
+      }
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+
+      const xDiff = t1.clientX - t2.clientX;
+      const yDiff = t1.clientY - t2.clientY;
+      initialDistance = Math.hypot(xDiff, yDiff);
+
+      const xMid = (t1.clientX + t2.clientX) / 2;
+      const yMid = (t1.clientY + t2.clientY) / 2;
+      const midX = xMid - rect.left;
+      const midY = yMid - rect.top;
+
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      initialAngle = Math.atan2(dy, dx);
+
+      pinchCenter = { x: midX, y: midY };
+      isPinching = true;
     }
-  } else if (e.touches.length === 2) {
-    const t1 = e.touches[0];
-    const t2 = e.touches[1];
-
-    const xDiff = t1.clientX - t2.clientX;
-    const yDiff = t1.clientY - t2.clientY;
-    initialDistance = Math.hypot(xDiff, yDiff);
-
-    const xMid = (t1.clientX + t2.clientX) / 2;
-    const yMid = (t1.clientY + t2.clientY) / 2;
-    const midX = (xMid - rect.left) * scaleX;
-    const midY = (yMid - rect.top) * scaleY;
-
-    const dx = t1.clientX - t2.clientX;
-    const dy = t1.clientY - t2.clientY;
-    initialAngle = Math.atan2(dy, dx);
-
-    pinchCenter = { x: midX, y: midY };
-    isPinching = true;
-  }
-}, { passive: true });
+  }, { passive: true });
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault(); // mencegah scroll saat drag
@@ -369,10 +345,8 @@
       if (e.touches.length === 1 && !isPinching) {
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / canvas.clientWidth;
-        const scaleY = canvas.height / canvas.clientHeight;
-        const touchX = (touch.clientX - rect.left) * scaleX;
-        const touchY = (touch.clientY - rect.top) * scaleY;
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
 
         if (isDragging) {
           maskPosition.x = touchX - dragOffset.x;
@@ -380,32 +354,8 @@
           drawPFP();
           return;
         }
-
-        if (isRotating) {
-          const centerX = maskPosition.x + maskImg.width * maskScale / 2;
-          const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-          const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
-          maskAngle = angle;
-          drawPFP();
-          return;
-        }
-
-        if (isResizing) {
-          const dx = touchX - resizeStart.x;
-          const dy = touchY - resizeStart.y;
-          const avgDelta = (dx + dy) / 2;
-          let newScale = initialMaskScale + avgDelta / 150;
-          if (newScale >= 0.1 && newScale <= 2) {
-            maskScale = newScale;
-            drawPFP();
-          }
-          return;
-        }
       } else if (e.touches.length === 2) {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / canvas.clientWidth;
-        const scaleY = canvas.height / canvas.clientHeight;
-
         const t1 = e.touches[0];
         const t2 = e.touches[1];
 
@@ -421,8 +371,8 @@
 
         const xMid = (t1.clientX + t2.clientX) / 2;
         const yMid = (t1.clientY + t2.clientY) / 2;
-        const midX = (xMid - rect.left) * scaleX;
-        const midY = (yMid - rect.top) * scaleY;
+        const midX = xMid - rect.left;
+        const midY = yMid - rect.top;
 
         const dx = t1.clientX - t2.clientX;
         const dy = t1.clientY - t2.clientY;
