@@ -139,7 +139,7 @@
       if (!profileImg || !maskImg) return;
 
       const isMobile = window.innerWidth <= 768;
-  const scale = isMobile ? 0.12 : 0.35; // mobile = lebih kecil
+  const scale = isMobile ? 0.25 : 0.35; // mobile = lebih kecil
   maskScale = scale;
 
   const scaledWidth = maskImg.width * scale;
@@ -195,9 +195,9 @@ function drawPFP() {
     // Responsif Canvas
 function resizeCanvas() {
   if (window.innerWidth <= 768) {
-    canvas.width = 300;
-    canvas.height = 300;
-    maskScale = 0.12; // mobile
+    canvas.width = 400;
+    canvas.height = 400;
+    maskScale = 0.25; // mobile
   } else {
     canvas.width = 512;
     canvas.height = 512;
@@ -414,37 +414,42 @@ downloadBtn.addEventListener('click', () => {
     return;
   }
 
-      // Buat canvas sementara
+  // HD resolution
+  const HD_SIZE = 1024;
+
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d');
 
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
+  tempCanvas.width = HD_SIZE;
+  tempCanvas.height = HD_SIZE;
 
-  if (profileImg) {
-    tempCtx.drawImage(profileImg, 0, 0, tempCanvas.width, tempCanvas.height);
-  }
+  // Draw profile image
+  tempCtx.drawImage(profileImg, 0, 0, HD_SIZE, HD_SIZE);
 
-  if (maskImg) {
-    const scaledWidth = maskImg.width * maskScale;
-    const scaledHeight = maskImg.height * maskScale;
+  // Draw mask (recalculate scale & position)
+  const scaleRatio = HD_SIZE / canvas.width;
+  const scaledWidth = maskImg.width * maskScale * scaleRatio;
+  const scaledHeight = maskImg.height * maskScale * scaleRatio;
+  const scaledX = maskPosition.x * scaleRatio;
+  const scaledY = maskPosition.y * scaleRatio;
+  const scaledAngle = maskAngle;
 
-    tempCtx.save();
-    tempCtx.translate(maskPosition.x + scaledWidth / 2, maskPosition.y + scaledHeight / 2);
-    tempCtx.rotate(maskAngle);
-    tempCtx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
-    tempCtx.restore();
-  }
+  tempCtx.save();
+  tempCtx.translate(scaledX + scaledWidth / 2, scaledY + scaledHeight / 2);
+  tempCtx.rotate(scaledAngle);
+  tempCtx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+  tempCtx.restore();
 
-      // Download
+  // Trigger download
   const dataURL = tempCanvas.toDataURL('image/png');
   const link = document.createElement('a');
-  link.download = 'FLAME GANG.png';
+  link.download = 'FLAME_GANG_HD.png';
   link.href = dataURL;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 });
+
 </script>
 </body>
 </html>
