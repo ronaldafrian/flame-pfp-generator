@@ -319,13 +319,14 @@ canvas.addEventListener('touchstart', (e) => {
   const centerX = maskPosition.x + scaledWidth / 2;
   const centerY = maskPosition.y + scaledHeight / 2;
 
-  const handleSize = 40;
+  const resizeSize = 40;
+  const rotateRadius = 30; // lebih besar dari versi desktop
 
-  // Resize
+  // Area Resize
   if (
-    touchX >= maskPosition.x + scaledWidth - handleSize &&
+    touchX >= maskPosition.x + scaledWidth - resizeSize &&
     touchX <= maskPosition.x + scaledWidth &&
-    touchY >= maskPosition.y + scaledHeight - handleSize &&
+    touchY >= maskPosition.y + scaledHeight - resizeSize &&
     touchY <= maskPosition.y + scaledHeight
     ) {
     isResizing = true;
@@ -334,16 +335,16 @@ canvas.addEventListener('touchstart', (e) => {
   return;
 }
 
-  // Rotate
+  // Area Rotate (atas mask)
 const dx = touchX - centerX;
 const dy = touchY - (centerY - scaledHeight / 2 - 20);
-if (Math.sqrt(dx * dx + dy * dy) <= 40) {
+if (Math.sqrt(dx * dx + dy * dy) <= rotateRadius) {
   isRotating = true;
   rotateStartAngle = Math.atan2(touchY - centerY, touchX - centerX) - lastMaskAngle;
   return;
 }
 
-  // Drag
+  // Area Drag
 if (
   touchX >= maskPosition.x &&
   touchX <= maskPosition.x + scaledWidth &&
@@ -353,48 +354,49 @@ if (
   isDragging = true;
 dragOffset.x = touchX - maskPosition.x;
 dragOffset.y = touchY - maskPosition.y;
-return;
 }
 }, { passive: true });
 
+
 canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // <- mencegah scroll
-    if (!maskImg) return;
+  e.preventDefault(); // mencegah scroll layar saat drag
+  if (!maskImg) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    const touchX = touch.clientX - rect.left;
-    const touchY = touch.clientY - rect.top;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const touchX = touch.clientX - rect.left;
+  const touchY = touch.clientY - rect.top;
 
-    if (isDragging) {
-      maskPosition.x = touchX - dragOffset.x;
-      maskPosition.y = touchY - dragOffset.y;
+  if (isDragging) {
+    maskPosition.x = touchX - dragOffset.x;
+    maskPosition.y = touchY - dragOffset.y;
+    drawPFP();
+    return;
+  }
+
+  if (isRotating) {
+    const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+    const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+    const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
+    maskAngle = angle;
+    drawPFP();
+    return;
+  }
+
+  if (isResizing) {
+    const dx = touchX - resizeStart.x;
+    const dy = touchY - resizeStart.y;
+    const avgDelta = (dx + dy) / 2;
+    let newScale = initialMaskScale + avgDelta / 200;
+
+    if (newScale >= 0.1 && newScale <= 2) {
+      maskScale = newScale;
       drawPFP();
-      return;
     }
+    return;
+  }
+}, { passive: false });
 
-    if (isRotating) {
-      const centerX = maskPosition.x + maskImg.width * maskScale / 2;
-      const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-      const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
-      maskAngle = angle;
-      drawPFP();
-      return;
-    }
-
-    if (isResizing) {
-      const dx = touchX - resizeStart.x;
-      const dy = touchY - resizeStart.y;
-      const avgDelta = (dx + dy) / 2;
-      let newScale = initialMaskScale + avgDelta / 200;
-
-      if (newScale >= 0.1 && newScale <= 2) {
-        maskScale = newScale;
-        drawPFP();
-      }
-      return;
-    }
-  }, { passive: false });
 
 window.addEventListener('touchend', () => {
   if (isRotating) lastMaskAngle = maskAngle;
