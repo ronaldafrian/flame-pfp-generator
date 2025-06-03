@@ -63,11 +63,16 @@
     let isDragging = false;
     let isRotating = false;
     let isResizing = false;
+    let isPinching = false;
+
     let dragOffset = { x: 0, y: 0 };
     let rotateStartAngle = 0;
     let lastMaskAngle = 0;
     let resizeStart = { x: 0, y: 0 };
     let initialMaskScale = maskScale;
+    let initialDistance = 0;
+    let initialAngle = 0;
+    let pinchCenter = { x: 0, y: 0 };
 
     // Upload Gambar
     profileInput.addEventListener('change', (e) => {
@@ -153,7 +158,7 @@
         ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
         ctx.restore();
 
-        // Titik Rotasi Merah (lebih besar untuk touch)
+        // Titik Rotasi Merah
         const centerX = maskPosition.x + scaledWidth / 2;
         const centerY = maskPosition.y + scaledHeight / 2;
         ctx.beginPath();
@@ -161,7 +166,7 @@
         ctx.fillStyle = 'red';
         ctx.fill();
 
-        // Kotak Resize Biru (lebih besar untuk touch)
+        // Kotak Resize Biru
         ctx.fillStyle = '#00ffcc';
         ctx.fillRect(maskPosition.x + scaledWidth - 20, maskPosition.y + scaledHeight - 20, 20, 20);
       } else {
@@ -195,6 +200,7 @@
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
+
       if (!maskImg) return;
 
       const scaledWidth = maskImg.width * maskScale;
@@ -209,34 +215,34 @@
         mouseX <= maskPosition.x + scaledWidth &&
         mouseY >= maskPosition.y + scaledHeight - handleSize &&
         mouseY <= maskPosition.y + scaledHeight
-      ) {
+        ) {
         isResizing = true;
-        resizeStart = { x: mouseX, y: mouseY };
-        initialMaskScale = maskScale;
-        return;
-      }
+      resizeStart = { x: mouseX, y: mouseY };
+      initialMaskScale = maskScale;
+      return;
+    }
 
       // Area Rotate
-      const dx = mouseX - centerX;
-      const dy = mouseY - (centerY - scaledHeight / 2 - 20);
-      if (Math.sqrt(dx * dx + dy * dy) <= 10) {
-        isRotating = true;
-        rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
-        return;
-      }
+    const dx = mouseX - centerX;
+    const dy = mouseY - (centerY - scaledHeight / 2 - 20);
+    if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+      isRotating = true;
+      rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
+      return;
+    }
 
       // Area Drag
-      if (
-        mouseX >= maskPosition.x &&
-        mouseX <= maskPosition.x + scaledWidth &&
-        mouseY >= maskPosition.y &&
-        mouseY <= maskPosition.y + scaledHeight
+    if (
+      mouseX >= maskPosition.x &&
+      mouseX <= maskPosition.x + scaledWidth &&
+      mouseY >= maskPosition.y &&
+      mouseY <= maskPosition.y + scaledHeight
       ) {
-        isDragging = true;
-        dragOffset.x = mouseX - maskPosition.x;
-        dragOffset.y = mouseY - maskPosition.y;
-      }
-    });
+      isDragging = true;
+    dragOffset.x = mouseX - maskPosition.x;
+    dragOffset.y = mouseY - maskPosition.y;
+  }
+});
 
     canvas.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -277,6 +283,7 @@
       isDragging = false;
       isRotating = false;
       isResizing = false;
+      isPinching = false;
     });
 
     // Touch Events
@@ -284,32 +291,34 @@
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / canvas.clientWidth;
       const scaleY = canvas.height / canvas.clientHeight;
-      const touch = e.touches[0];
-      const touchX = (touch.clientX - rect.left) * scaleX;
-      const touchY = (touch.clientY - rect.top) * scaleY;
 
       if (!maskImg) return;
 
-      const scaledWidth = maskImg.width * maskScale;
-      const scaledHeight = maskImg.height * maskScale;
-      const centerX = maskPosition.x + scaledWidth / 2;
-      const centerY = maskPosition.y + scaledHeight / 2;
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const touchX = (touch.clientX - rect.left) * scaleX;
+        const touchY = (touch.clientY - rect.top) * scaleY;
 
-      // Area Resize
-      const resizeSize = 60;
-      if (
-        touchX >= maskPosition.x + scaledWidth - resizeSize &&
-        touchX <= maskPosition.x + scaledWidth &&
-        touchY >= maskPosition.y + scaledHeight - resizeSize &&
-        touchY <= maskPosition.y + scaledHeight
-      ) {
-        isResizing = true;
+        const scaledWidth = maskImg.width * maskScale;
+        const scaledHeight = maskImg.height * maskScale;
+        const centerX = maskPosition.x + scaledWidth / 2;
+        const centerY = maskPosition.y + scaledHeight / 2;
+
+        // Area Resize
+        const resizeSize = 60;
+        if (
+          touchX >= maskPosition.x + scaledWidth - resizeSize &&
+          touchX <= maskPosition.x + scaledWidth &&
+          touchY >= maskPosition.y + scaledHeight - resizeSize &&
+          touchY <= maskPosition.y + scaledHeight
+          ) {
+          isResizing = true;
         resizeStart = { x: touchX, y: touchY };
         initialMaskScale = maskScale;
         return;
       }
 
-      // Area Rotate
+        // Area Rotate
       const rotateRadius = 50;
       const dx = touchX - centerX;
       const dy = touchY - (centerY - scaledHeight / 2 - 20);
@@ -319,64 +328,136 @@
         return;
       }
 
-      // Area Drag
+        // Area Drag
       if (
         touchX >= maskPosition.x &&
         touchX <= maskPosition.x + scaledWidth &&
         touchY >= maskPosition.y &&
         touchY <= maskPosition.y + scaledHeight
-      ) {
+        ) {
         isDragging = true;
-        dragOffset.x = touchX - maskPosition.x;
-        dragOffset.y = touchY - maskPosition.y;
-      }
-    }, { passive: true });
+      dragOffset.x = touchX - maskPosition.x;
+      dragOffset.y = touchY - maskPosition.y;
+    }
+  } else if (e.touches.length === 2) {
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+
+    const xDiff = t1.clientX - t2.clientX;
+    const yDiff = t1.clientY - t2.clientY;
+    initialDistance = Math.hypot(xDiff, yDiff);
+
+    const xMid = (t1.clientX + t2.clientX) / 2;
+    const yMid = (t1.clientY + t2.clientY) / 2;
+    const midX = (xMid - rect.left) * scaleX;
+    const midY = (yMid - rect.top) * scaleY;
+
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    initialAngle = Math.atan2(dy, dx);
+
+    pinchCenter = { x: midX, y: midY };
+    isPinching = true;
+  }
+}, { passive: true });
 
     canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
+      e.preventDefault(); // mencegah scroll saat drag
+
       if (!maskImg) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / canvas.clientWidth;
-      const scaleY = canvas.height / canvas.clientHeight;
-      const touch = e.touches[0];
-      const touchX = (touch.clientX - rect.left) * scaleX;
-      const touchY = (touch.clientY - rect.top) * scaleY;
+      if (e.touches.length === 1 && !isPinching) {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / canvas.clientWidth;
+        const scaleY = canvas.height / canvas.clientHeight;
+        const touchX = (touch.clientX - rect.left) * scaleX;
+        const touchY = (touch.clientY - rect.top) * scaleY;
 
-      if (isDragging) {
-        maskPosition.x = touchX - dragOffset.x;
-        maskPosition.y = touchY - dragOffset.y;
-        drawPFP();
-        return;
-      }
+        if (isDragging) {
+          maskPosition.x = touchX - dragOffset.x;
+          maskPosition.y = touchY - dragOffset.y;
+          drawPFP();
+          return;
+        }
 
-      if (isRotating) {
+        if (isRotating) {
+          const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+          const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+          const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
+          maskAngle = angle;
+          drawPFP();
+          return;
+        }
+
+        if (isResizing) {
+          const dx = touchX - resizeStart.x;
+          const dy = touchY - resizeStart.y;
+          const avgDelta = (dx + dy) / 2;
+          let newScale = initialMaskScale + avgDelta / 150;
+          if (newScale >= 0.1 && newScale <= 2) {
+            maskScale = newScale;
+            drawPFP();
+          }
+          return;
+        }
+      } else if (e.touches.length === 2) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / canvas.clientWidth;
+        const scaleY = canvas.height / canvas.clientHeight;
+
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+
+        const xDiff = t1.clientX - t2.clientX;
+        const yDiff = t1.clientY - t2.clientY;
+        const distance = Math.hypot(xDiff, yDiff);
+
+        const scaleChange = distance / initialDistance;
+        let newScale = maskScale * scaleChange;
+        if (newScale >= 0.1 && newScale <= 3) {
+          maskScale = newScale;
+        }
+
+        const xMid = (t1.clientX + t2.clientX) / 2;
+        const yMid = (t1.clientY + t2.clientY) / 2;
+        const midX = (xMid - rect.left) * scaleX;
+        const midY = (yMid - rect.top) * scaleY;
+
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        const currentAngle = Math.atan2(dy, dx);
+        const angleChange = currentAngle - initialAngle;
+        maskAngle += angleChange;
+        lastMaskAngle = maskAngle;
+
         const centerX = maskPosition.x + maskImg.width * maskScale / 2;
         const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-        const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
-        maskAngle = angle;
-        drawPFP();
-        return;
-      }
 
-      if (isResizing) {
-        const dx = touchX - resizeStart.x;
-        const dy = touchY - resizeStart.y;
-        const avgDelta = (dx + dy) / 2;
-        let newScale = initialMaskScale + avgDelta / 150;
-        if (newScale >= 0.1 && newScale <= 2) {
-          maskScale = newScale;
-          drawPFP();
-        }
-        return;
+        const dxToCenter = centerX - pinchCenter.x;
+        const dyToCenter = centerY - pinchCenter.y;
+
+        const cos = Math.cos(angleChange);
+        const sin = Math.sin(angleChange);
+        const rotatedX = dxToCenter * cos - dyToCenter * sin;
+        const rotatedY = dxToCenter * sin + dyToCenter * cos;
+
+        maskPosition.x = pinchCenter.x + rotatedX - (maskImg.width * maskScale / 2);
+        maskPosition.y = pinchCenter.y + rotatedY - (maskImg.height * maskScale / 2);
+
+        initialDistance = distance;
+        initialAngle = currentAngle;
+        pinchCenter = { x: midX, y: midY };
+
+        drawPFP();
       }
     }, { passive: false });
 
-    window.addEventListener('touchend', () => {
-      if (isRotating) lastMaskAngle = maskAngle;
+    canvas.addEventListener('touchend', () => {
       isDragging = false;
       isRotating = false;
       isResizing = false;
+      isPinching = false;
     });
 
     // Tombol Download
