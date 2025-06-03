@@ -337,7 +337,7 @@ canvas.addEventListener('touchstart', (e) => {
   // Rotate
 const dx = touchX - centerX;
 const dy = touchY - (centerY - scaledHeight / 2 - 20);
-if (Math.sqrt(dx * dx + dy * dy) <= 20) {
+if (Math.sqrt(dx * dx + dy * dy) <= 40) {
   isRotating = true;
   rotateStartAngle = Math.atan2(touchY - centerY, touchX - centerX) - lastMaskAngle;
   return;
@@ -358,42 +358,43 @@ return;
 }, { passive: true });
 
 canvas.addEventListener('touchmove', (e) => {
-  if (!maskImg) return;
+    e.preventDefault(); // <- mencegah scroll
+    if (!maskImg) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const touchX = touch.clientX - rect.left;
-  const touchY = touch.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const touchX = touch.clientX - rect.left;
+    const touchY = touch.clientY - rect.top;
 
-  if (isDragging) {
-    maskPosition.x = touchX - dragOffset.x;
-    maskPosition.y = touchY - dragOffset.y;
-    drawPFP();
-    return;
-  }
-
-  if (isRotating) {
-    const centerX = maskPosition.x + maskImg.width * maskScale / 2;
-    const centerY = maskPosition.y + maskImg.height * maskScale / 2;
-    const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
-    maskAngle = angle;
-    drawPFP();
-    return;
-  }
-
-  if (isResizing) {
-    const dx = touchX - resizeStart.x;
-    const dy = touchY - resizeStart.y;
-    const avgDelta = (dx + dy) / 2;
-    let newScale = initialMaskScale + avgDelta / 200;
-
-    if (newScale >= 0.1 && newScale <= 2) {
-      maskScale = newScale;
+    if (isDragging) {
+      maskPosition.x = touchX - dragOffset.x;
+      maskPosition.y = touchY - dragOffset.y;
       drawPFP();
+      return;
     }
-    return;
-  }
-}, { passive: true });
+
+    if (isRotating) {
+      const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+      const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+      const angle = Math.atan2(touchY - centerY, touchX - centerX) - rotateStartAngle;
+      maskAngle = angle;
+      drawPFP();
+      return;
+    }
+
+    if (isResizing) {
+      const dx = touchX - resizeStart.x;
+      const dy = touchY - resizeStart.y;
+      const avgDelta = (dx + dy) / 2;
+      let newScale = initialMaskScale + avgDelta / 200;
+
+      if (newScale >= 0.1 && newScale <= 2) {
+        maskScale = newScale;
+        drawPFP();
+      }
+      return;
+    }
+  }, { passive: false });
 
 window.addEventListener('touchend', () => {
   if (isRotating) lastMaskAngle = maskAngle;
