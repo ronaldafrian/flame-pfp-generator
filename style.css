@@ -42,7 +42,9 @@ h1 {
   color: #ff7f00;
 }
 
-#profileInput, #cropConfirmBtn, button {
+#profileInput,
+#cropConfirmBtn,
+button {
   cursor: pointer;
   border-radius: 8px;
   border: none;
@@ -83,46 +85,99 @@ button#downloadBtn:hover {
   background: #cc5200;
 }
 
+/* Gallery Mask Horizontal Scroll */
+.gallery-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  padding: 5px 10px;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.nav-btn:hover {
+  opacity: 1;
+}
+
+#prevBtn {
+  left: 0px; /* Tombol kiri lebih dekat */
+}
+
+#nextBtn {
+  right: 0px; /* Tombol kanan lebih dekat */
+}
+
+.gallery-container {
+  position: relative;
+  width: 100%;
+  max-width: 700px; /* Tambahkan agar tidak terlalu lebar */
+  margin: 0 auto; /* Ini akan memusatkan kontainer */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0px; /* Tambah padding agar tombol panah tidak mepet */
+}
+
+
 .gallery {
   display: flex;
-  justify-content: center;
   gap: 15px;
-  margin: 15px 0;
+  scroll-behavior: smooth;
+  overflow-x: auto;
+  padding: 0 10px;
+  height: 180px;
+  justify-content: center; /* ini penting agar isi tetap di tengah */
+  align-items: center;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
 }
 
-#maskGallery img {
-  width: 150px;
-  height: 150px;
-  object-fit: contain;
-  cursor: pointer;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
 
 #maskGallery img.selected {
-  border: 3px solid #ff6600;
-  box-shadow: 0 4px 12px rgba(255,102,0,0.7);
+  border: 2px solid #ff6600;
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.7);
+  transform: scale(1.05);
+  margin-left: 10px; /* offset untuk outline */
 }
 
-#maskGallery img:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+.gallery::-webkit-scrollbar {
+  display: none;
 }
 
 .gallery img {
-  width: 80px;
-  height: 80px;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
-  border-radius: 10px;
-  border: 2px solid transparent;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
   cursor: pointer;
-  transition: border-color 0.3s ease;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .gallery img.selected {
-  border-color: #ff6600;
-  box-shadow: 0 0 10px #ff6600aa;
+  border: 3px solid #ff6600;
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.7);
+}
+
+.gallery img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
 #pfpCanvas {
@@ -224,7 +279,7 @@ button#downloadBtn:hover {
     min-height: 48px;
   }
 
-   #pfpCanvas {
+  #pfpCanvas {
     width: 100%;
     max-width: 300px;
     height: auto;
@@ -236,19 +291,13 @@ button#downloadBtn:hover {
     background-size: contain;
   }
 
+  /* Mobile gallery styles */
   .gallery {
-    flex-wrap: wrap;
-    justify-content: center;
+    width: 100%;
+    padding: 0 10px;     /* Tambah padding agar outline tidak kepotong */
     gap: 10px;
-    margin-bottom: 1rem;
-  }
-
-  #maskGallery {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 1rem;
+    height: 100px;
+    overflow-x: auto;    /* Penting untuk scroll di mobile */
   }
 
   #maskGallery img {
