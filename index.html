@@ -395,12 +395,20 @@ canvas.addEventListener('touchmove', (e) => {
   }
 }, { passive: true });
 
-window.addEventListener('touchend', () => {
+window.addEventListener('touchend', (e) => {
   if (isRotating) lastMaskAngle = maskAngle;
   isDragging = false;
   isRotating = false;
   isResizing = false;
+
+  // Jika semua jari sudah diangkat
+  if (e.touches.length === 0) {
+    dragOffset = { x: 0, y: 0 };
+    rotateStartAngle = 0;
+    resizeStart = { x: 0, y: 0 };
+  }
 });
+
 
 
     // Tombol Download
