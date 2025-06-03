@@ -66,123 +66,142 @@
 
     let maskPosition = { x: 0, y: 0 };
     let maskAngle = 0;
-    let maskScale = 0.35;
+    function getInitialMaskScale() {
+  return window.innerWidth <= 768 ? 0.1 : 0.35; // Skala lebih kecil di mobile
+}
 
-    let isDragging = false;
-    let isRotating = false;
-    let isResizing = false;
+let maskScale = getInitialMaskScale();
 
-    let dragOffset = { x: 0, y: 0 };
-    let rotateStartAngle = 0;
-    let lastMaskAngle = 0;
+let isDragging = false;
+let isRotating = false;
+let isResizing = false;
 
-    let resizeStart = { x: 0, y: 0 };
-    let initialMaskScale = maskScale;
+let dragOffset = { x: 0, y: 0 };
+let rotateStartAngle = 0;
+let lastMaskAngle = 0;
 
-    profileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+let resizeStart = { x: 0, y: 0 };
+let initialMaskScale = maskScale;
 
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        cropperImage.src = e.target.result;
-        cropperContainer.style.display = 'block';
-        if (cropper) {
-          cropper.destroy();
-        }
-        cropper = new Cropper(cropperImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-          autoCropArea: 1,
-          movable: true,
-          zoomable: false,
-          scalable: false,
-          rotatable: false,
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+profileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    cropConfirmBtn.addEventListener('click', () => {
-      if (cropper) {
-        const croppedCanvas = cropper.getCroppedCanvas({ width: 512, height: 512 });
-        const img = new Image();
-        img.onload = () => {
-          profileImg = img;
-          centerMask();
-          drawPFP();
-        };
-        img.src = croppedCanvas.toDataURL();
-        cropper.destroy();
-        cropper = null;
-        cropperContainer.style.display = 'none';
-      }
-    });
-
-    maskGallery.querySelectorAll('img').forEach(imgEl => {
-      imgEl.addEventListener('click', () => {
-        maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
-        imgEl.classList.add('selected');
-
-        const img = new Image();
-        img.onload = () => {
-          maskImg = img;
-          centerMask();
-          drawPFP();
-        };
-        img.src = imgEl.src;
-      });
-    });
-
-    function centerMask() {
-      if (!profileImg || !maskImg) return;
-
-      const scaledWidth = maskImg.width * maskScale;
-      const scaledHeight = maskImg.height * maskScale;
-
-      maskPosition.x = (canvas.width - scaledWidth) / 2;
-      maskPosition.y = (canvas.height - scaledHeight) / 2;
-      maskAngle = 0;
-      lastMaskAngle = 0;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    cropperImage.src = e.target.result;
+    cropperContainer.style.display = 'block';
+    if (cropper) {
+      cropper.destroy();
     }
+    cropper = new Cropper(cropperImage, {
+      aspectRatio: 1,
+      viewMode: 1,
+      autoCropArea: 1,
+      movable: true,
+      zoomable: false,
+      scalable: false,
+      rotatable: false,
+    });
+  };
+  reader.readAsDataURL(file);
+});
 
-    function drawPFP() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+cropConfirmBtn.addEventListener('click', () => {
+  if (cropper) {
+    const croppedCanvas = cropper.getCroppedCanvas({ width: 512, height: 512 });
+    const img = new Image();
+    img.onload = () => {
+      profileImg = img;
+      centerMask();
+      drawPFP();
+    };
+    img.src = croppedCanvas.toDataURL();
+    cropper.destroy();
+    cropper = null;
+    cropperContainer.style.display = 'none';
+  }
+});
 
-      if (profileImg) {
-        ctx.drawImage(profileImg, 0, 0, canvas.width, canvas.height);
-      }
+maskGallery.querySelectorAll('img').forEach(imgEl => {
+  imgEl.addEventListener('click', () => {
+    maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
+    imgEl.classList.add('selected');
 
-      if (maskImg) {
-        const scaledWidth = maskImg.width * maskScale;
-        const scaledHeight = maskImg.height * maskScale;
+    const img = new Image();
+    img.onload = () => {
+      maskImg = img;
+      centerMask();
+      drawPFP();
+    };
+    img.src = imgEl.src;
+  });
+});
 
-        ctx.save();
-        ctx.translate(maskPosition.x + scaledWidth / 2, maskPosition.y + scaledHeight / 2);
-        ctx.rotate(maskAngle);
-        ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
-        ctx.restore();
+function centerMask() {
+  if (!profileImg || !maskImg) return;
+
+  const scale = window.innerWidth <= 768 ? 0.25 : 0.35;
+  maskScale = scale;
+
+  const scaledWidth = maskImg.width * scale;
+  const scaledHeight = maskImg.height * scale;
+
+  maskPosition.x = (canvas.width - scaledWidth) / 2;
+  maskPosition.y = (canvas.height - scaledHeight) / 2;
+  maskAngle = 0;
+  lastMaskAngle = 0;
+
+  drawPFP();
+}
+
+function drawPFP() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (profileImg) {
+    ctx.drawImage(profileImg, 0, 0, canvas.width, canvas.height);
+  }
+
+  if (maskImg) {
+    const scaledWidth = maskImg.width * maskScale;
+    const scaledHeight = maskImg.height * maskScale;
+
+    ctx.save();
+    ctx.translate(maskPosition.x + scaledWidth / 2, maskPosition.y + scaledHeight / 2);
+    ctx.rotate(maskAngle);
+    ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+    ctx.restore();
 
         // Titik rotasi merah
-        const centerX = maskPosition.x + scaledWidth / 2;
-        const centerY = maskPosition.y + scaledHeight / 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'red';
-        ctx.fill();
+    const centerX = maskPosition.x + scaledWidth / 2;
+    const centerY = maskPosition.y + scaledHeight / 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'red';
+    ctx.fill();
 
         // Handle resize
-        ctx.fillStyle = '#00ffcc';
-        ctx.fillRect(maskPosition.x + scaledWidth - 12, maskPosition.y + scaledHeight - 12, 12, 12);
-      }
-    }
+    ctx.fillStyle = '#00ffcc';
+    ctx.fillRect(maskPosition.x + scaledWidth - 12, maskPosition.y + scaledHeight - 12, 12, 12);
+  }
+}
 
-    function resizeCanvas() {
+function resizeCanvas() {
   const maxWidth = window.innerWidth * 0.9; // 90% lebar layar
-  const size = Math.min(maxWidth, 512);
+  const size = Math.min(maxWidth, 300); // Maksimum 300 piksel untuk mobile
   canvas.width = size;
   canvas.height = size;
-  drawPFP();
+
+  // Tambahkan placeholder teks jika belum ada gambar
+  if (!profileImg && !maskImg) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.font = "24px Arial";
+    ctx.fillText("No Image Selected", canvas.width / 2, canvas.height / 2);
+  } else {
+    drawPFP();
+  }
 }
 
 window.addEventListener('resize', resizeCanvas);
