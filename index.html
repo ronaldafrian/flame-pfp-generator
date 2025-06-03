@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FLAME PFP Generator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="favicon.png" />
+  <meta name="description" content="FLAME PFP Generator">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" />
+</head>
+<body>
+  <h1>
+    <img src="logo.png" alt="Logo" class="logo" />
+    FLAME PFP Generator
+  </h1>
+
+
+  <div class="container">
+    <!-- Upload Profil -->
+    <div class="input-section">
+      <h3>Upload Your Pic</h3>
+      <input type="file" id="profileInput" accept="image/*" />
+    </div>
+
+    <!-- Cropper Preview -->
+    <div class="input-section" id="cropperContainer" style="display: none;">
+      <h3>Crop Image</h3>
+      <img id="cropperImage" alt="Crop preview" />
+      <button id="cropConfirmBtn">✔️ Confirm Crop</button>
+    </div>
+
+    <!-- Mask Gallery -->
+    <div class="input-section">
+      <h3>Choose Mask</h3>
+      <div class="gallery" id="maskGallery">
+        <img src="mask1.png" alt="Mask 1" />
+        <img src="mask2.png" alt="Mask 2" />
+        <img src="mask3.png" alt="Mask 3" />
+      </div>
+    </div>
+
+    <!-- Canvas untuk preview -->
+    <canvas id="pfpCanvas" width="512" height="512"></canvas>
+
+    <!-- Tombol Download -->
+    <div class="controls">
+      <button id="downloadBtn">💾 Download PFP</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <script>
+    const profileInput = document.getElementById('profileInput');
+    const cropperImage = document.getElementById('cropperImage');
+    const cropperContainer = document.getElementById('cropperContainer');
+    const cropConfirmBtn = document.getElementById('cropConfirmBtn');
+    const canvas = document.getElementById('pfpCanvas');
+    const ctx = canvas.getContext('2d');
+    const maskGallery = document.getElementById('maskGallery');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let cropper = null;
+    let profileImg = null;
+    let maskImg = null;
+
+    let maskPosition = { x: 0, y: 0 };
+    let maskAngle = 0;
+    let maskScale = 0.35;
+
+    let isDragging = false;
+    let isRotating = false;
+    let isResizing = false;
+
+    let dragOffset = { x: 0, y: 0 };
+    let rotateStartAngle = 0;
+    let lastMaskAngle = 0;
+
+    let resizeStart = { x: 0, y: 0 };
+    let initialMaskScale = maskScale;
+
+    profileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        cropperImage.src = e.target.result;
+        cropperContainer.style.display = 'block';
+        if (cropper) {
+          cropper.destroy();
+        }
+        cropper = new Cropper(cropperImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          autoCropArea: 1,
+          movable: true,
+          zoomable: false,
+          scalable: false,
+          rotatable: false,
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    cropConfirmBtn.addEventListener('click', () => {
+      if (cropper) {
+        const croppedCanvas = cropper.getCroppedCanvas({ width: 512, height: 512 });
+        const img = new Image();
+        img.onload = () => {
+          profileImg = img;
+          centerMask();
+          drawPFP();
+        };
+        img.src = croppedCanvas.toDataURL();
+        cropper.destroy();
+        cropper = null;
+        cropperContainer.style.display = 'none';
+      }
+    });
+
+    maskGallery.querySelectorAll('img').forEach(imgEl => {
+      imgEl.addEventListener('click', () => {
+        maskGallery.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
+        imgEl.classList.add('selected');
+
+        const img = new Image();
+        img.onload = () => {
+          maskImg = img;
+          centerMask();
+          drawPFP();
+        };
+        img.src = imgEl.src;
+      });
+    });
+
+    function centerMask() {
+      if (!profileImg || !maskImg) return;
+
+      const scaledWidth = maskImg.width * maskScale;
+      const scaledHeight = maskImg.height * maskScale;
+
+      maskPosition.x = (canvas.width - scaledWidth) / 2;
+      maskPosition.y = (canvas.height - scaledHeight) / 2;
+      maskAngle = 0;
+      lastMaskAngle = 0;
+    }
+
+    function drawPFP() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (profileImg) {
+        ctx.drawImage(profileImg, 0, 0, canvas.width, canvas.height);
+      }
+
+      if (maskImg) {
+        const scaledWidth = maskImg.width * maskScale;
+        const scaledHeight = maskImg.height * maskScale;
+
+        ctx.save();
+        ctx.translate(maskPosition.x + scaledWidth / 2, maskPosition.y + scaledHeight / 2);
+        ctx.rotate(maskAngle);
+        ctx.drawImage(maskImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+        ctx.restore();
+
+        // Titik rotasi merah
+        const centerX = maskPosition.x + scaledWidth / 2;
+        const centerY = maskPosition.y + scaledHeight / 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - scaledHeight / 2 - 20, 6, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+
+        // Handle resize
+        ctx.fillStyle = '#00ffcc';
+        ctx.fillRect(maskPosition.x + scaledWidth - 12, maskPosition.y + scaledHeight - 12, 12, 12);
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (!maskImg) return;
+
+      const scaledWidth = maskImg.width * maskScale;
+      const scaledHeight = maskImg.height * maskScale;
+
+      // Cek resize handle
+      const handleSize = 12;
+      const handleX = maskPosition.x + scaledWidth - handleSize;
+      const handleY = maskPosition.y + scaledHeight - handleSize;
+      if (
+        mouseX >= handleX && mouseX <= handleX + handleSize &&
+        mouseY >= handleY && mouseY <= handleY + handleSize
+        ) {
+        isResizing = true;
+      resizeStart = { x: mouseX, y: mouseY };
+      initialMaskScale = maskScale;
+      return;
+    }
+
+      // Cek rotasi
+    const centerX = maskPosition.x + scaledWidth / 2;
+    const centerY = maskPosition.y + scaledHeight / 2;
+    const dx = mouseX - centerX;
+    const dy = mouseY - (centerY - scaledHeight / 2 - 20);
+    if (Math.sqrt(dx * dx + dy * dy) <= 10) {
+      isRotating = true;
+      rotateStartAngle = Math.atan2(mouseY - centerY, mouseX - centerX) - lastMaskAngle;
+      return;
+    }
+
+      // Cek drag
+    if (
+      mouseX >= maskPosition.x &&
+      mouseX <= maskPosition.x + scaledWidth &&
+      mouseY >= maskPosition.y &&
+      mouseY <= maskPosition.y + scaledHeight
+      ) {
+      isDragging = true;
+    dragOffset.x = mouseX - maskPosition.x;
+    dragOffset.y = mouseY - maskPosition.y;
+    return;
+  }
+});
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (isDragging && maskImg) {
+        maskPosition.x = mouseX - dragOffset.x;
+        maskPosition.y = mouseY - dragOffset.y;
+        drawPFP();
+        return;
+      }
+
+      if (isRotating && maskImg) {
+        const centerX = maskPosition.x + maskImg.width * maskScale / 2;
+        const centerY = maskPosition.y + maskImg.height * maskScale / 2;
+        const angle = Math.atan2(mouseY - centerY, mouseX - centerX) - rotateStartAngle;
+        maskAngle = angle;
+        drawPFP();
+        return;
+      }
+
+      if (isResizing && maskImg) {
+        const dx = mouseX - resizeStart.x;
+        const dy = mouseY - resizeStart.y;
+        const avgDelta = (dx + dy) / 2;
+        let newScale = initialMaskScale + avgDelta / 200;
+
+        if (newScale >= 0.1 && newScale <= 2) {
+          maskScale = newScale;
+          drawPFP();
+        }
+        return;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isRotating) lastMaskAngle = maskAngle;
+      isDragging = false;
+      isRotating = false;
+      isResizing = false;
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!profileImg) {
+        alert("UPLOAD YOUR PICT!");
+        return;
+      }
+      if (!maskImg) {
+        alert("ADD MASK!");
+        return;
+      }
+
+      drawPFP();
+
+      const dataURL = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = 'FLAME GANG.png';
+      link.href = dataURL;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
