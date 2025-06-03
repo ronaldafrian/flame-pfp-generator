@@ -302,8 +302,8 @@ canvas.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => {
   if (isRotating) lastMaskAngle = maskAngle;
   isDragging = false;
-  isRotating = false;
-  isResizing = false;
+  isRotating = true;
+  isResizing = true;
 });
 
 canvas.addEventListener('touchstart', (e) => {
