@@ -228,7 +228,7 @@ canvas.addEventListener('mousedown', (e) => {
   const centerY = maskPosition.y + scaledHeight / 2;
 
       // Cek Resize
-  const handleSize = 12;
+  const handleSize = 40;
   if (
     mouseX >= maskPosition.x + scaledWidth - handleSize &&
     mouseX <= maskPosition.x + scaledWidth &&
@@ -319,7 +319,7 @@ canvas.addEventListener('touchstart', (e) => {
   const centerX = maskPosition.x + scaledWidth / 2;
   const centerY = maskPosition.y + scaledHeight / 2;
 
-  const handleSize = 20;
+  const handleSize = 40;
 
   // Resize
   if (
@@ -395,20 +395,12 @@ canvas.addEventListener('touchmove', (e) => {
   }
 }, { passive: true });
 
-window.addEventListener('touchend', (e) => {
+window.addEventListener('touchend', () => {
   if (isRotating) lastMaskAngle = maskAngle;
   isDragging = false;
   isRotating = false;
   isResizing = false;
-
-  // Jika semua jari sudah diangkat
-  if (e.touches.length === 0) {
-    dragOffset = { x: 0, y: 0 };
-    rotateStartAngle = 0;
-    resizeStart = { x: 0, y: 0 };
-  }
 });
-
 
 
     // Tombol Download
