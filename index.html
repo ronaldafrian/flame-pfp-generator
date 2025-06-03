@@ -302,8 +302,8 @@ canvas.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => {
   if (isRotating) lastMaskAngle = maskAngle;
   isDragging = false;
-  isRotating = true;
-  isResizing = true;
+  isRotating = false;
+  isResizing = false;
 });
 
 canvas.addEventListener('touchstart', (e) => {
@@ -316,13 +316,12 @@ canvas.addEventListener('touchstart', (e) => {
 
   const scaledWidth = maskImg.width * maskScale;
   const scaledHeight = maskImg.height * maskScale;
+
   const centerX = maskPosition.x + scaledWidth / 2;
   const centerY = maskPosition.y + scaledHeight / 2;
 
-  const resizeSize = 40;
-  const rotateRadius = 30; // lebih besar dari versi desktop
-
-  // Area Resize
+  // Area Resize - ukuran diperbesar untuk pengalaman mobile
+  const resizeSize = 60;
   if (
     touchX >= maskPosition.x + scaledWidth - resizeSize &&
     touchX <= maskPosition.x + scaledWidth &&
@@ -335,7 +334,8 @@ canvas.addEventListener('touchstart', (e) => {
   return;
 }
 
-  // Area Rotate (atas mask)
+  // Area Rotasi - radius diperbesar agar mudah disentuh
+const rotateRadius = 50;
 const dx = touchX - centerX;
 const dy = touchY - (centerY - scaledHeight / 2 - 20);
 if (Math.sqrt(dx * dx + dy * dy) <= rotateRadius) {
@@ -359,11 +359,11 @@ dragOffset.y = touchY - maskPosition.y;
 
 
 canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault(); // mencegah scroll layar saat drag
+  e.preventDefault(); // mencegah scroll saat drag
   if (!maskImg) return;
 
   const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
+  const touch = e.touches[0]; // Pastikan hanya menyentuh satu titik
   const touchX = touch.clientX - rect.left;
   const touchY = touch.clientY - rect.top;
 
@@ -387,7 +387,7 @@ canvas.addEventListener('touchmove', (e) => {
     const dx = touchX - resizeStart.x;
     const dy = touchY - resizeStart.y;
     const avgDelta = (dx + dy) / 2;
-    let newScale = initialMaskScale + avgDelta / 200;
+    let newScale = initialMaskScale + avgDelta / 150; // sensitivitas lebih tinggi untuk mobile
 
     if (newScale >= 0.1 && newScale <= 2) {
       maskScale = newScale;
@@ -395,7 +395,7 @@ canvas.addEventListener('touchmove', (e) => {
     }
     return;
   }
-}, { passive: false });
+}, { passive: false }); // penting untuk mencegah error preventDefault()
 
 
 window.addEventListener('touchend', () => {
